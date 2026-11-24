@@ -6,18 +6,19 @@ Most apps give one number ("35 min"). Pahunch answers the question a commuter re
 **"When must I leave to reach by 9:30?"** It includes the **wait for the bus**, and says **how sure it is**,
 using a confidence level that was **tested on a day the model never saw**.
 
-## Results on real Delhi data (held-out day: 14 Oct 2026)
-| Test | Result |
-|---|---|
-| Test cases (simulated riders, random arrival moments, 4 hours of day) | 4,717 |
-| Ride-time error (MAE), Pahunch | **3.28 min** |
-| Ride-time error, timetable baseline | 4.33 min |
-| Ride-time error, all-day-average baseline | 4.74 min |
-| "Plan for" time was enough (rider arrived on time) | **87%** (83% before the calibrated buffer) |
-| Weakest hour (midday) | 74% |
+## Results on real Delhi data (5 different test days, each never seen by the model)
+| Test day | Test cases | Ride-time error (min) | "Plan for" was enough |
+|---|---|---|---|
+| 8 Oct | 4,182 | 3.58 | 85% |
+| 9 Oct | 3,951 | 3.10 | 90% |
+| 12 Oct | 4,009 | 3.95 | 83% |
+| 13 Oct | 4,865 | 2.97 | 89% |
+| 14 Oct | 4,717 | 3.28 | 87% |
+| **Average** | | **3.38** | **87%** (range 83–90%) |
 
-Calibration of the buffer was done on a *different* weekday (13 Oct) than the test day (14 Oct).
-We report the weak spots rather than hide them.
+- Ride-time error was lower than the published timetable (5.4–6.1 min on four of the five days) and than the all-day average (4.5–5.6 min) on every test day.
+- Each test day was held out completely. The safety buffer was learned on a *different* earlier weekday.
+- Target was 90% on time; we reach 83–90%, average 87%. Midday (13:00) is the weakest hour (74–87%). Full reports: `multi/` and `validation_report.md`.
 
 ## What is different
 1. **Leave-by, not just duration.** Wait + ride are simulated together; the plan uses the P90.
@@ -64,7 +65,7 @@ Raw GPS `.db` files (16 GB) are not in this repo; `data/` and `passes/` hold the
 
 ## Known limits (honest)
 - Only 6 routes, direct trips only: no transfers yet.
-- One held-out test day; midday reliability is weaker (74%).
+- Tested on 5 October weekdays only; midday reliability is weaker (74–87%).
 - Historical statistics only. Waiting uncertainty is the biggest error source; blending the live GTFS-RT feed for the next bus is the Phase 2 step.
 - Google Maps cannot show past dates, so a Google comparison is only a sanity check, not proof.
 - Offline: the screen, stop list and previously viewed answers work without internet; new questions and map tiles need a connection.
