@@ -1,4 +1,4 @@
-# Pahunch (पहुँच) or LeaveWise — reach on time, and know how sure we are
+# Pahunch (पहुँच) / LeaveWise — reach on time, and know how sure we are
 
 **Transport Stack Hackathon 2026 · Phase 1 · Problem 1: real-time bus traffic model + journey planner API**
 
