@@ -4,7 +4,25 @@ Instead of one number ("35 min"), LeaveWise tells a commuter **when to leave** t
 including the **wait for the bus**, and says **how sure it is** (traffic-light + "worked about 87 times in 100 on a day it had not seen").
 All numbers come from what DTC buses actually did in the October 2026 GPS data.
 
-## What is in this repo
+## Quick start (about 2 minutes)
+
+    pip install -r requirements.txt
+    python -m leavewise.app --data data --passes passes
+
+Then open http://127.0.0.1:8000. The processed data for 5-14 Oct 2026 is included, so the raw GPS files are not needed.
+
+## Results (held-out day 14 Oct 2026, 4,717 trips, 6 routes)
+
+| Measure | LeaveWise | Baseline |
+|---|---|---|
+| Typical ride-time error | **3.28 min** | 4.33 min (all-day average), 4.74 min (timetable) |
+| Trips where wait + ride fit the plan-for time | **87%** | 45% (typical time alone) |
+
+87% is below our 90% target, and this is one test day. Details and weak spots are in `validation_report.md` and `TECHNICAL_NOTE.pdf`.
+
+## Rebuild from raw data (optional)
+
+Steps 0-3 rebuild the processed data from the raw GPS files and are not needed to run the demo. Step 4 starts the app.
 | Step | Command | What it does |
 |---|---|---|
 | 0 | `python -m leavewise.inspect_day --db DAY.db --gtfs GTFS_DIR` | shows the real data format, busiest routes, and whether route ids match GTFS |
@@ -35,7 +53,7 @@ Also: `/api/stops`, `/api/health`, `/api/card` (hour-by-hour table for a printab
 - Direct single-route trips only; no transfers, crowding or live-feed blending yet (live GTFS-RT would shift the typical time for the next bus; planned for Phase 2).
 - Route line with loops/short-turn variants uses one shape per direction.
 - Holiday list (`common.HOLIDAYS`) must be checked; DTC buses only (no cluster buses in the history).
-- Unit tests use synthetic data; all reported results use the real October 2026 GPS data (see validation_report.md and TECHNICAL_NOTE.md).
+- Unit tests use synthetic data; all reported results use the real October 2026 GPS data (see validation_report.md and TECHNICAL_NOTE.pdf).
 
 ## Credits
 pandas, numpy, Flask. Data: Delhi Transport Stack (JICA / Chartr / IIIT Delhi).
