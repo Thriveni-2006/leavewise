@@ -1,59 +1,73 @@
-# LeaveWise — reliability-aware "leave-by" bus planner for Delhi (Transport Stack Hackathon 2026, Problem 1)
+# Pahunch (पहुँच) — reach on time, and know how sure we are
 
-Instead of one number ("35 min"), LeaveWise tells a commuter **when to leave** to reach a place by a given time,
-including the **wait for the bus**, and says **how sure it is** (traffic-light + "worked about 87 times in 100 on a day it had not seen").
-All numbers come from what DTC buses actually did in the October 2026 GPS data.
+**Transport Stack Hackathon 2026 · Phase 1 · Problem 1: real-time bus traffic model + journey planner API**
 
-## Quick start (about 2 minutes)
+Most apps give one number ("35 min"). Pahunch answers the question a commuter really has:
+**"When must I leave to reach by 9:30?"** It includes the **wait for the bus**, and says **how sure it is**,
+using a confidence level that was **tested on a day the model never saw**.
 
-    pip install -r requirements.txt
-    python -m leavewise.app --data data --passes passes
+## Results on real Delhi data (held-out day: 14 Oct 2026)
+| Test | Result |
+|---|---|
+| Test cases (simulated riders, random arrival moments, 4 hours of day) | 4,717 |
+| Ride-time error (MAE), Pahunch | **3.28 min** |
+| Ride-time error, timetable baseline | 4.33 min |
+| Ride-time error, all-day-average baseline | 4.74 min |
+| "Plan for" time was enough (rider arrived on time) | **87%** (83% before the calibrated buffer) |
+| Weakest hour (midday) | 74% |
 
-Then open http://127.0.0.1:8000. The processed data for 5-14 Oct 2026 is included, so the raw GPS files are not needed.
+Calibration of the buffer was done on a *different* weekday (13 Oct) than the test day (14 Oct).
+We report the weak spots rather than hide them.
 
-## Results (held-out day 14 Oct 2026, 4,717 trips, 6 routes)
+## What is different
+1. **Leave-by, not just duration.** Wait + ride are simulated together; the plan uses the P90.
+2. **Honest confidence.** 🙂 / 😐 / 😟 comes from data volume and spread, and each level has a measured on-time rate.
+3. **One reliability table, many outputs.** The same table feeds the API, the screen, a printable stop card, a 160-character SMS text, and an operator view of unreliable route-hours.
+4. **For everyone.** Icons, Hindi text and voice, WhatsApp share, printable card, works offline for answers already viewed.
+5. **Sells nothing.** No tickets, no payments, no login. Nothing to refund and no personal data.
 
-| Measure | LeaveWise | Baseline |
-|---|---|---|
-| Typical ride-time error | **3.28 min** | 4.33 min (all-day average), 4.74 min (timetable) |
-| Trips where wait + ride fit the plan-for time | **87%** | 45% (typical time alone) |
+## Data and method
+- Real DTC GPS (October 2026) + real static GTFS (2,574 routes; 6 routes modelled). GPS route ids match GTFS route ids.
+- Each bus run is projected on the GTFS route line (numpy only), direction chosen by best fit; pings >80 m off the line, duplicates, >108 km/h jumps and backward noise dropped.
+- Stop pass times are interpolated; passes across GPS gaps >240 s or >1.5 km are **discarded, not guessed**.
+- Statistics (median, P90) per route-direction, stop pair, hour (±1 h) and day type (weekday/weekend/holiday).
+- Wait times come from observed gaps between buses, weighted because riders arrive at random moments.
+- Fallback when data is thin: same hour+day type → same day type → all days → timetable → distance at 14 km/h. The level used is shown as `basis` and lowers confidence.
 
-87% is below our 90% target, and this is one test day. Details and weak spots are in `validation_report.md` and `TECHNICAL_NOTE.pdf`.
+## Run it
+Python 3.9+.
+```
+pip install -r requirements.txt
+python -m leavewise.app --data data --passes passes
+```
+Open http://127.0.0.1:5000 (use the port printed in the terminal). Tests: `python -m pytest -q tests`.
 
-## Rebuild from raw data (optional)
+### API
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/journeys?from=LAT,LNG&to=LAT,LNG&date=2026-10-07&arrive_by=09:30` | options with `leave_by`, walk, boarding stop, route, alight stop, typical and plan-for minutes, `confidence`, `n_observations`, `basis`, `on_time_rate` |
+| same with `&depart=08:30` | arrival-time options |
+| `/api/sms?...` | ≤160-character text answer (`lang=hi` for Hindi) |
+| `/api/card` | hour-by-hour table for the printable stop card |
+| `/api/operator` | route × hour reliability table for operators |
+| `/api/stops`, `/api/routes`, `/api/health` | support endpoints |
 
-Steps 0-3 rebuild the processed data from the raw GPS files and are not needed to run the demo. Step 4 starts the app.
-| Step | Command | What it does |
-|---|---|---|
-| 0 | `python -m leavewise.inspect_day --db DAY.db --gtfs GTFS_DIR` | shows the real data format, busiest routes, and whether route ids match GTFS |
-| 1 | `python -m leavewise.gtfs_prep --gtfs GTFS_DIR --routes 534,764,... --out data` | shrinks static GTFS to the chosen routes (stops, order, shape) |
-| 2 | `python -m leavewise.build_day --db DAY.db --routes 534,764,... --data data --out passes` | one day of GPS → time each bus reached each stop (run for each day) |
-| 3 | `python -m leavewise.validate --data data --passes passes` | hold-out-day validation → `validation_report.md`, `calibration.json`, `gmaps_template.csv` |
-| 4 | `python -m leavewise.app --data data --passes passes` | API + screen at http://127.0.0.1:8000 |
-| – | `python -m pytest -q tests` | tests on synthetic data |
-| – | `python -m leavewise.gen_synthetic --out syn` | FAKE data in the real format, for testing only |
+`from` / `to` also accept `stop:<stop_id>`.
 
-Install: `pip install pandas numpy flask` (Python 3.9+).
-
-## API
-`GET /api/journeys?from=LAT,LNG&to=LAT,LNG&date=2026-10-07&depart=08:30` → options with walk, boarding stop, route, alight stop, typical and plan-for time, arrival.
-`GET /api/journeys?...&arrive_by=09:30` → same plus `leave_by` (the key feature). `from`/`to` also accept `stop:<stop_id>`.
-Each option includes `confidence` (high/medium/low), `n_observations`, `basis` (which fallback level was used), `quiet_ride_min` (usual time without the rush) and `on_time_rate` (from validation).
-Also: `/api/stops`, `/api/health`, `/api/card` (hour-by-hour table for a printable stop card).
-
-## Method (short)
-1. **GPS → route.** Each bus run is projected onto the GTFS route line (numpy, no map-matching library). Direction is chosen by best fit; pings >80 m off the line, duplicates, >108 km/h jumps and backward noise are dropped.
-2. **Stop pass times.** Time is interpolated at each stop's position along the line. If the nearest pings are >4 min or >1.5 km apart, that stop pass is **discarded, not guessed**.
-3. **Reliability model.** For a stop pair, hour and day type, we keep the real distribution of ride times (median, P90) and of waits (from observed gaps between buses, weighted because riders arrive randomly).
-4. **Leave-by.** arrive-by − walk − P90 of (wait + ride, simulated together) − walk. Waiting is part of the plan, treated separately from riding.
-5. **Fallback ladder when data is thin:** same hour & day type → same day type all hours → all days → timetable → distance at 14 km/h. The level used is shown to the user as `basis`, and confidence drops.
-6. **Validation:** model never sees the hold-out day; compared with timetable and all-day-average baselines; plan-for coverage and confidence calibration reported. Google Maps comparison: fill `gmaps_minutes` in `gmaps_template.csv` by hand, then `python -m leavewise.validate --gmaps gmaps_template.csv`.
+### Rebuild from raw data (optional)
+```
+python -m leavewise.gtfs_prep --gtfs GTFS_DIR --routes 729,764,78,... --out data
+python -m leavewise.build_day --db DAY.db --routes 729,764,78,... --data data --out passes
+python -m leavewise.validate --data data --passes passes
+```
+Raw GPS `.db` files (16 GB) are not in this repo; `data/` and `passes/` hold the processed results.
 
 ## Known limits (honest)
-- Direct single-route trips only; no transfers, crowding or live-feed blending yet (live GTFS-RT would shift the typical time for the next bus; planned for Phase 2).
-- Route line with loops/short-turn variants uses one shape per direction.
-- Holiday list (`common.HOLIDAYS`) must be checked; DTC buses only (no cluster buses in the history).
-- Unit tests use synthetic data; all reported results use the real October 2026 GPS data (see validation_report.md and TECHNICAL_NOTE.pdf).
+- Only 6 routes, direct trips only: no transfers yet.
+- One held-out test day; midday reliability is weaker (74%).
+- Historical statistics only. Waiting uncertainty is the biggest error source; blending the live GTFS-RT feed for the next bus is the Phase 2 step.
+- Google Maps cannot show past dates, so a Google comparison is only a sanity check, not proof.
+- Offline: the screen, stop list and previously viewed answers work without internet; new questions and map tiles need a connection.
 
 ## Credits
-pandas, numpy, Flask. Data: Delhi Transport Stack (JICA / Chartr / IIIT Delhi).
+pandas, numpy, Flask, Leaflet + OpenStreetMap. Data: Delhi Transport Stack (JICA / Chartr / IIIT Delhi).
