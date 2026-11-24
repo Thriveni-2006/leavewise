@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LeaveWise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600;700&family=DotGothic16&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --road:#1b1f24; --road2:#2a3037; --amber:#ffb000; --amber-d:#b87f00;
+  --ground:#e9edf1; --card:#ffffff; --ink:#161a1f; --mut:#586271; --line:#d3d9e0;
+  --ok:#1f7a4d; --mid:#b7791f; --bad:#b83a2e; --focus:#0b5fff;
+}
+@media (prefers-color-scheme:dark){:root{--ground:#12161a;--card:#1b2026;--ink:#eef1f4;--mut:#9aa5b3;--line:#2d343c;--focus:#7aa7ff}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:Hind,system-ui,"Noto Sans Devanagari",sans-serif;font-size:17px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px 40px}
+header{display:flex;align-items:center;gap:12px;padding:14px 0}
+.mark{width:40px;height:40px;border-radius:10px;background:var(--road);display:grid;place-items:center;flex:none}
+.brand{font-weight:700;font-size:24px;line-height:1}
+.brand small{display:block;font-weight:400;font-size:13px;color:var(--mut);margin-top:3px}
+.sp{flex:1}
+.ghost{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:500}
+.ghost{color:var(--ink)}a.ghost{color:var(--ink)}
+.banner{display:none;background:#fff1c7;color:#5a4300;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-weight:500}
+.grid{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:900px){.grid{grid-template-columns:380px 1fr;align-items:start}.left{position:sticky;top:12px}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+h2{font-size:19px;margin:0 0 12px;font-weight:600}
+label{display:block;font-size:15px;color:var(--mut);margin:12px 0 4px}
+input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);min-height:48px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.go{width:100%;margin-top:16px;min-height:52px;border:0;border-radius:12px;background:var(--road);color:#fff;font-weight:700;font-size:18px;cursor:pointer}
+.go:hover{background:var(--road2)}
+.try{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+.try button{border:1px dashed var(--line);background:transparent;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:15px;color:var(--mut)}
+.try button:hover{border-color:var(--mut);color:var(--ink)}
+/* the bus destination board */
+.board{background:var(--road);border-radius:14px;padding:18px 20px;color:var(--amber);position:relative;overflow:hidden}
+.board:before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,176,0,.10) 1px,transparent 1.4px);background-size:5px 5px;pointer-events:none}
+.board .small{font-size:15px;color:#c9a040;position:relative}
+.led{font-family:DotGothic16,"Courier New",monospace;color:var(--amber);text-shadow:0 0 14px rgba(255,176,0,.45);position:relative}
+.time{font-size:clamp(56px,13vw,92px);line-height:1;letter-spacing:.02em}
+.dest{font-size:clamp(18px,3.6vw,24px);margin-top:10px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.routechip{background:var(--amber);color:var(--road);padding:2px 12px;border-radius:6px;font-weight:700;text-shadow:none;font-family:DotGothic16,monospace}
+.tabs{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+.tab{border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:6px 14px;cursor:pointer;font-weight:600}
+.tab[aria-selected=true]{background:var(--road);color:var(--amber);border-color:var(--road)}
+.answer{display:grid;gap:16px;margin-top:16px}
+@media(min-width:700px){.answer.cols{grid-template-columns:1fr 1fr}}
+ol.steps{list-style:none;margin:0;padding:0}
+ol.steps li{display:grid;grid-template-columns:40px 1fr;gap:12px;padding-bottom:14px;position:relative}
+ol.steps li:not(:last-child):before{content:"";position:absolute;left:19px;top:38px;bottom:0;width:2px;background:var(--line)}
+.ic{width:38px;height:38px;border-radius:50%;background:var(--ground);display:grid;place-items:center;font-size:20px}
+.st b{font-size:18px}
+.st span{display:block;color:var(--mut);font-size:15px}
+.conf{display:flex;gap:12px;align-items:center}
+.dots{display:flex;gap:5px}
+.dots i{width:14px;height:14px;border-radius:50%;background:var(--line)}
+.c-high .dots i:nth-child(-n+3){background:var(--ok)} .c-medium .dots i:nth-child(-n+2){background:var(--mid)} .c-low .dots i:nth-child(-n+1){background:var(--bad)}
+.conf strong{font-size:18px}
+.facts{color:var(--mut);font-size:15px;margin:6px 0 0}
+.range{display:flex;gap:18px;margin:12px 0 0;flex-wrap:wrap}
+.range div{min-width:110px}.range b{font-size:26px;display:block;line-height:1.1}.range span{font-size:14px;color:var(--mut)}
+.hours{display:flex;align-items:flex-end;gap:3px;height:96px;margin-top:8px}
+.hours div{flex:1;background:var(--road2);opacity:.55;border-radius:3px 3px 0 0;min-height:4px}
+.hours div.t0{background:#1f7a4d;opacity:1}.hours div.t1{background:#9aa5b3;opacity:.55}.hours div.t2{background:#b83a2e;opacity:1}
+.hours div.now{opacity:1;outline:3px solid var(--ink);outline-offset:1px}
+.face{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0 0;font-size:17px;font-weight:600}
+.hlabel{display:flex;gap:3px;font-size:12px;color:var(--mut)}.hlabel span{flex:1;text-align:center}
+.act{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.act button{min-height:46px}
+#map{height:360px;border-radius:12px;overflow:hidden;background:var(--ground);border:1px solid var(--line)}
+#map svg{width:100%;height:100%;display:block}
+.empty{color:var(--mut)}
+.err{background:#fde8e5;color:#7a1e14;border-radius:10px;padding:12px 14px}
+@media print{header,.left,.act,.tabs,.banner,#map{display:none!important}.grid{display:block}.panel{border:0;padding:0}}
+@media(prefers-reduced-motion:no-preference){.board .time{transition:opacity .25s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="mark" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffb000" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="13" rx="2.5"/><path d="M3 11h18M7 20v-3M17 20v-3"/><circle cx="7.5" cy="14" r=".8" fill="#ffb000"/><circle cx="16.5" cy="14" r=".8" fill="#ffb000"/></svg></div>
+  <div class="brand"><span id="tName">LeaveWise</span><small id="tTag"></small></div>
+  <div class="sp"></div>
+  <button class="ghost" id="lang" aria-label="Change language">हिंदी</button>
+</header>
+<div class="banner" id="off"></div>
+<div class="grid">
+  <section class="left">
+    <form class="panel" id="form" autocomplete="off">
+      <h2 id="tAsk"></h2>
+      <label for="from" id="lFrom"></label><input id="from" list="stops" required>
+      <label for="to" id="lTo"></label><input id="to" list="stops" required>
+      <div class="two">
+        <div><label for="date" id="lDate"></label><input id="date" type="date" required></div>
+        <div><label for="time" id="lTime"></label><input id="time" type="time" value="09:30" required></div>
+      </div>
+      <button class="go" id="go" type="submit"></button>
+      <div class="try" id="try"></div>
+    </form>
+    <datalist id="stops"></datalist>
+  </section>
+  <section>
+    <div class="panel" id="result"><p class="empty" id="tEmpty"></p></div>
+    <div class="panel" style="margin-top:16px"><div id="map" role="img" aria-label="Route map"></div></div>
+  </section>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+<script>
+let HI=false, STOPS=[], DATA=null, SEL=0, MAP=null, LAYER=null;
+const S={
+en:{tag:"Reach on time. Know how sure we are.",ask:"When do you need to be there?",from:"From",to:"To",date:"Day",time:"Reach by",go:"Find when to leave",
+ empty:"Pick two places and a time. You get the time to leave, the bus, and how sure we are.",
+ leave:"Leave by",walk:"Walk",wait:"Wait for the bus",ride:"Ride",arrive:"Walk to your place",min:"min",upto:"up to",
+ high:"Very reliable",medium:"Fairly reliable",low:"Not sure. Leave extra early.",
+ tests:"Worked in {n} of 10 tests on days the model had not seen",basis:"Based on {n} similar trips ({b})",
+ usual:"Usually",plan:"Plan for",rush:"The rush adds about {n} min compared with the quietest hour.",
+ hours:"Time needed if you leave around each hour",speak:"Speak",print:"Print answer",card:"Stop card",share:"Send on WhatsApp",best:"Best time",avoid:"Avoid",more:"More details",cached:"Saved on this phone. Works without internet.",none:"No direct bus found within a short walk of both places.",
+ off:"No internet. Showing your last saved answer.",pick:"Pick both places from the list.",err:"Something went wrong. Check the server is running and try again.",
+ opt:"Option",try:"Try:",from_s:"Board at",to_s:"Get off at",sayl:"Leave by {t}. Take bus {r} from {a} to {b}.",novoice:"No Hindi voice found on this device, so the English voice is used. To add one on Windows: Settings, Time and language, Speech, Add voices, Hindi."},
+hi:{tag:"समय पर पहुँचिए। हम कितने पक्के हैं, यह भी जानिए।",ask:"कब तक पहुँचना है?",from:"कहाँ से",to:"कहाँ तक",date:"दिन",time:"कब तक पहुँचना है",go:"कब निकलूँ, बताइए",
+ empty:"दो जगहें और समय चुनिए। आपको निकलने का समय, बस और भरोसे का स्तर मिलेगा।",
+ leave:"इतने बजे निकलें",walk:"पैदल चलें",wait:"बस का इंतज़ार",ride:"बस में सफ़र",arrive:"अपनी जगह तक पैदल",min:"मिनट",upto:"लगभग",
+ high:"बहुत भरोसेमंद",medium:"ठीक-ठाक भरोसेमंद",low:"पक्का नहीं। थोड़ा जल्दी निकलें।",
+ tests:"जिन दिनों का डेटा मॉडल ने नहीं देखा था, उनमें 10 में से {n} बार सही",basis:"{n} मिलते-जुलते सफ़र के आधार पर ({b})",
+ usual:"आमतौर पर",plan:"इतना मानकर चलें",rush:"भीड़ के समय सबसे शांत घंटे से लगभग {n} मिनट ज़्यादा लगते हैं।",
+ hours:"हर घंटे निकलने पर कितना समय लगेगा",speak:"सुनें",print:"जवाब छापें",card:"स्टॉप कार्ड",share:"WhatsApp पर भेजें",best:"सबसे अच्छा समय",avoid:"बचें",more:"और जानकारी",cached:"इस फ़ोन में सेव है। बिना इंटरनेट भी चलेगा।",none:"दोनों जगहों के पास सीधी बस नहीं मिली।",
+ off:"इंटरनेट नहीं है। आपका पिछला सेव किया जवाब दिख रहा है।",pick:"सूची से दोनों जगहें चुनिए।",err:"कुछ गड़बड़ हुई। सर्वर चालू है या नहीं देखें और दोबारा कोशिश करें।",
+ opt:"विकल्प",try:"आज़माएँ:",from_s:"यहाँ चढ़ें",to_s:"यहाँ उतरें",sayl:"",novoice:"इस डिवाइस में हिंदी आवाज़ नहीं मिली। Windows में: Settings, Time and language, Speech, Add voices, Hindi।"}};
+const t=(k,o={})=>{let x=S[HI?'hi':'en'][k]||k;for(const q in o)x=x.replace('{'+q+'}',o[q]);return x};
+const $=id=>document.getElementById(id);
+const fmt=m=>Math.max(1,Math.round(m));
+
+function labels(){
+  document.documentElement.lang=HI?'hi':'en';
+  $('tTag').textContent=t('tag');$('tAsk').textContent=t('ask');$('lFrom').textContent=t('from');$('lTo').textContent=t('to');
+  $('lDate').textContent=t('date');$('lTime').textContent=t('time');$('go').textContent=t('go');
+  $('lang').textContent=HI?'English':'हिंदी';
+  if(!DATA)$('tEmpty').textContent=t('empty');
+  renderTry();
+}
+function label(s){return s.name+' · '+s.id}
+async function loadStops(){
+  try{STOPS=await (await fetch('/api/stops')).json();localStorage.setItem('pa_stops',JSON.stringify(STOPS))}
+  catch(e){try{STOPS=JSON.parse(localStorage.getItem('pa_stops')||'[]')}catch(_){}}
+  $('stops').innerHTML=STOPS.map(s=>`<option value="${label(s).replace(/"/g,'&quot;')}">`).join('');
+}
+function find(v){return STOPS.find(s=>label(s)===v)||STOPS.find(s=>s.name===v)}
+let EX=[];
+async function loadEx(){try{EX=await (await fetch('/api/examples')).json()}catch(e){EX=[]};renderTry()}
+function renderTry(){
+  const el=$('try');if(!EX.length){el.innerHTML='';return}
+  el.innerHTML=`<span style="color:var(--mut);padding:6px 0">${t('try')}</span>`+EX.slice(0,3).map((e,i)=>`<button type="button" data-i="${i}">${e.route}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{const e=EX[+b.dataset.i];const a=STOPS.find(s=>s.id===e.from_id),c=STOPS.find(s=>s.id===e.to_id);
+    if(a&&c){$('from').value=label(a);$('to').value=label(c);$('form').requestSubmit()}});
+}
+function icon(k){return {walk:'🚶',wait:'⏳',ride:'🚌',arrive:'🏁'}[k]}
+function render(){
+  const R=$('result');
+  if(!DATA||!DATA.options||!DATA.options.length){R.innerHTML=`<p class="empty">${t('none')}</p>`;drawMap(null);return}
+  const o=DATA.options[SEL];
+  const tabs=DATA.options.length>1?`<div class="tabs" role="tablist">${DATA.options.map((x,i)=>`<button class="tab" role="tab" aria-selected="${i===SEL}" data-i="${i}">${t('opt')} ${i+1} · ${x.route}</button>`).join('')}</div>`:'';
+  const rush=o.quiet_ride_min&&o.ride_typical_min>o.quiet_ride_min+1?`<p class="facts">${t('rush',{n:fmt(o.ride_typical_min-o.quiet_ride_min)})}</p>`:'';
+  const rate=(o.on_time_rate!=null&&o.confidence!=='low')?`<p class="facts">${t('tests',{n:Math.floor(o.on_time_rate*10)})}</p>`:'';
+  R.innerHTML=`${tabs}
+  <div class="board" aria-live="polite">
+    <div class="small">${t('leave')}</div>
+    <div class="led time">${o.leave_by}</div>
+    <div class="dest"><span class="routechip">${o.route}</span><span class="led">${o.alight_stop}</span></div>
+  </div>
+  <div class="answer cols">
+    <div>
+      <ol class="steps">
+        <li><div class="ic">${icon('walk')}</div><div class="st"><b>${t('walk')} ${fmt(o.walk_to_stop_min)} ${t('min')}</b><span>${t('from_s')}: ${o.board_stop}</span></div></li>
+        <li><div class="ic">${icon('wait')}</div><div class="st"><b>${t('wait')}: ${t('upto')} ${fmt(o.wait_plan_min)} ${t('min')}</b><span>${o.wait_basis}</span></div></li>
+        <li><div class="ic">${icon('ride')}</div><div class="st"><b>${t('ride')} ${fmt(o.ride_typical_min)}–${fmt(o.ride_plan_min)} ${t('min')}</b><span>${t('to_s')}: ${o.alight_stop}</span></div></li>
+        <li><div class="ic">${icon('arrive')}</div><div class="st"><b>${t('arrive')} ${fmt(o.walk_from_stop_min)} ${t('min')}</b></div></li>
+      </ol>
+    </div>
+    <div>
+      <div class="conf"><span style="font-size:34px;line-height:1">${{high:'🙂',medium:'😐',low:'😟'}[o.confidence]}</span><strong>${t(o.confidence)}</strong></div>
+      <div class="range"><div><b>${fmt(o.door_to_door_typical_min)} ${t('min')}</b><span>${t('usual')}</span></div><div><b>${fmt(o.door_to_door_plan_min)} ${t('min')}</b><span>${t('plan')}</span></div></div>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">${t('more')}</summary>
+        ${rate}
+        <p class="facts">${t('basis',{n:o.n_observations,b:o.basis})}</p>
+        ${rush}
+      </details>
+    </div>
+  </div>
+  <h2 style="margin-top:6px;font-size:16px;color:var(--mut);font-weight:500">${t('hours')}</h2>
+  <div class="hours" id="hours"></div><div class="hlabel" id="hl"></div><div class="face" id="face"></div>
+  <div class="act">
+    <button class="ghost" id="sp">🔊 ${t('speak')}</button>
+    <a class="ghost" style="text-decoration:none;display:inline-flex;align-items:center" target="_blank" rel="noopener" href="${waLink(o)}">📲 ${t('share')}</a>
+    <button class="ghost" onclick="window.print()">🖨️ ${t('print')}</button>
+    <a class="ghost" style="text-decoration:none;display:inline-flex;align-items:center" target="_blank" href="/card.html?route=${encodeURIComponent(o.route)}&route_id=${o.route_id}&direction=${o.direction}&from_stop=${o.board_idx}&to_stop=${o.alight_idx}&fn=${encodeURIComponent(o.board_stop)}&tn=${encodeURIComponent(o.alight_stop)}">🪧 ${t('card')}</a>
+  </div>`;
+  R.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{SEL=+b.dataset.i;render()});
+  $('sp').onclick=()=>speakAnswer(o);
+  loadHours(o);drawMap(o);
+}
+
+const HW="शून्य,एक,दो,तीन,चार,पाँच,छह,सात,आठ,नौ,दस,ग्यारह,बारह,तेरह,चौदह,पंद्रह,सोलह,सत्रह,अठारह,उन्नीस,बीस,इक्कीस,बाईस,तेईस,चौबीस,पच्चीस,छब्बीस,सत्ताईस,अट्ठाईस,उनतीस,तीस,इकतीस,बत्तीस,तैंतीस,चौंतीस,पैंतीस,छत्तीस,सैंतीस,अड़तीस,उनतालीस,चालीस,इकतालीस,बयालीस,तैंतालीस,चौवालीस,पैंतालीस,छियालीस,सैंतालीस,अड़तालीस,उनचास,पचास,इक्यावन,बावन,तिरपन,चौवन,पचपन,छप्पन,सत्तावन,अट्ठावन,उनसठ".split(',');
+const hw=n=>(n>=0&&n<60)?HW[n]:String(n);
+function hiTime(hhmm){
+  const [H,M]=hhmm.split(':').map(Number);
+  const per=H<4?'रात':H<12?'सुबह':H<16?'दोपहर':H<20?'शाम':'रात';
+  const h12=H%12===0?12:H%12;
+  return per+' '+hw(h12)+(M?' बजकर '+hw(M)+' मिनट':' बजे');
+}
+let VOICES=[];
+function loadVoices(){VOICES=speechSynthesis.getVoices()||[]}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+function voiceFor(prefix){return VOICES.find(v=>v.lang.replace('_','-').toLowerCase().startsWith(prefix))||null}
+function speakAnswer(o){
+  if(!('speechSynthesis' in window))return;
+  speechSynthesis.cancel();
+  const routeNum=String(o.route).replace(/[A-Za-z]+/g,'').trim()||o.route;
+  let text,lang,voice;
+  if(HI){
+    voice=voiceFor('hi');
+    text=`${hiTime(o.leave_by)} पर निकलें। बस नंबर ${routeNum} पकड़ें। सफ़र लगभग ${hw(fmt(o.ride_typical_min))} से ${hw(fmt(o.ride_plan_min))} मिनट का है। बस का इंतज़ार ${hw(fmt(o.wait_plan_min))} मिनट तक हो सकता है।`;
+    lang='hi-IN';
+    if(!voice){const b=$('off');b.textContent=t('novoice');b.style.display='block';text=`Leave by ${o.leave_by}. Take bus ${routeNum}. Ride ${fmt(o.ride_typical_min)} to ${fmt(o.ride_plan_min)} minutes.`;lang='en-IN';voice=voiceFor('en-in')||voiceFor('en')}
+  }else{
+    voice=voiceFor('en-in')||voiceFor('en');
+    text=`Leave by ${o.leave_by}. Take bus ${routeNum} from ${o.board_stop}. The ride takes about ${fmt(o.ride_typical_min)} to ${fmt(o.ride_plan_min)} minutes. Waiting for the bus can take up to ${fmt(o.wait_plan_min)} minutes.`;
+    lang='en-IN';
+  }
+  const u=new SpeechSynthesisUtterance(text);u.lang=lang;if(voice)u.voice=voice;u.rate=0.85;speechSynthesis.speak(u);
+}
+
+function waLink(o){
+  const msg=HI
+   ? `पहुँच: ${hiTime(o.leave_by)} पर निकलें। बस ${o.route}। ${o.board_stop} से चढ़ें, ${o.alight_stop} पर उतरें। सफ़र लगभग ${fmt(o.ride_typical_min)}-${fmt(o.ride_plan_min)} मिनट।`
+   : `LeaveWise: leave by ${o.leave_by}. Bus ${o.route}: board at ${o.board_stop}, get off at ${o.alight_stop}. Ride ${fmt(o.ride_typical_min)}-${fmt(o.ride_plan_min)} min. Plan for ${fmt(o.door_to_door_plan_min)} min door to door.`;
+  return 'https://wa.me/?text='+encodeURIComponent(msg);
+}
+async function loadHours(o){
+  try{
+    const dow=new Date($('date').value+'T00:00:00').getDay();const dt=(dow===0||dow===6)?'weekend':'weekday';
+    const q=`/api/card?route_id=${o.route_id}&direction=${o.direction}&from_stop=${o.board_idx}&to_stop=${o.alight_idx}&daytype=${dt}`;
+    const rows=await (await fetch(q)).json();const mx=Math.max(...rows.map(r=>r.plan));
+    const h=+$('time').value.split(':')[0];
+    const near=Math.max(5,Math.min(23,h-1));
+    const order=[...rows].sort((a,b)=>a.plan-b.plan);const good=new Set(order.slice(0,3).map(r=>r.hour)),bad=new Set(order.slice(-3).map(r=>r.hour));
+    const tier=r=>good.has(r.hour)?'t0':bad.has(r.hour)?'t2':'t1';
+    $('hours').innerHTML=rows.map(r=>`<div class="${tier(r)} ${r.hour===near?'now':''}" style="height:${Math.max(6,r.plan/mx*100)}%" title="${r.hour}:00 · ${fmt(r.plan)} ${t('min')}"></div>`).join('');
+    $('hl').innerHTML=rows.map(r=>`<span>${r.hour%3===0?r.hour:''}</span>`).join('');
+    const best=rows.reduce((a,b)=>b.plan<a.plan?b:a),worst=rows.reduce((a,b)=>b.plan>a.plan?b:a);
+    $('face').innerHTML=`<span>🙂 ${t('best')}: ${best.hour}:00 (${fmt(best.plan)} ${t('min')})</span><span>😟 ${t('avoid')}: ${worst.hour}:00 (${fmt(worst.plan)} ${t('min')})</span>`;
+  }catch(e){}
+}
+async function drawMap(o){
+  const m=$('map');
+  if(!o){m.innerHTML='';return}
+  let pts=[];try{pts=await (await fetch(`/api/shape?route_id=${o.route_id}&direction=${o.direction}`)).json()}catch(e){}
+  if(window.L&&navigator.onLine){
+    try{
+      if(!MAP){MAP=L.map('map',{scrollWheelZoom:false});L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(MAP)}
+      if(LAYER)LAYER.remove();LAYER=L.layerGroup().addTo(MAP);
+      const line=L.polyline(pts,{color:'#1b1f24',weight:5,opacity:.85}).addTo(LAYER);
+      const dot=(la,ln,c,txt)=>L.circleMarker([la,ln],{radius:9,color:'#1b1f24',weight:3,fillColor:c,fillOpacity:1}).bindTooltip(txt,{permanent:true,direction:'top'}).addTo(LAYER);
+      dot(o.board_lat,o.board_lng,'#ffb000',t('from_s'));dot(o.alight_lat,o.alight_lng,'#1f7a4d',t('to_s'));
+      MAP.fitBounds(line.getBounds(),{padding:[20,20]});setTimeout(()=>MAP.invalidateSize(),100);return;
+    }catch(e){}
+  }
+  // offline fallback: draw the route line ourselves
+  if(!pts.length)return;
+  const lat=pts.map(p=>p[0]),lng=pts.map(p=>p[1]);const k=Math.cos(lat[0]*Math.PI/180);
+  const X=lng.map(v=>v*k),Y=lat.map(v=>-v);const x0=Math.min(...X),x1=Math.max(...X),y0=Math.min(...Y),y1=Math.max(...Y);
+  const W=600,H=360,pad=30,sc=Math.min((W-2*pad)/(x1-x0||1),(H-2*pad)/(y1-y0||1));
+  const P=(a,b)=>[pad+(b*k-x0)*sc,pad+(-a-y0)*sc];
+  const d=pts.map((p,i)=>(i?'L':'M')+P(p[0],p[1]).map(v=>v.toFixed(1)).join(' ')).join('');
+  const a=P(o.board_lat,o.board_lng),c=P(o.alight_lat,o.alight_lng);
+  m.innerHTML=`<svg viewBox="0 0 ${W} ${H}"><path d="${d}" fill="none" stroke="#1b1f24" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+   <circle cx="${a[0]}" cy="${a[1]}" r="9" fill="#ffb000" stroke="#1b1f24" stroke-width="3"/><circle cx="${c[0]}" cy="${c[1]}" r="9" fill="#1f7a4d" stroke="#1b1f24" stroke-width="3"/></svg>`;
+}
+$('form').onsubmit=async e=>{
+  e.preventDefault();
+  const a=find($('from').value),b=find($('to').value);
+  if(!a||!b){$('result').innerHTML=`<div class="err">${t('pick')}</div>`;return}
+  $('off').style.display='none';
+  try{
+    const q=`/api/journeys?from=${a.lat},${a.lng}&to=${b.lat},${b.lng}&date=${$('date').value}&arrive_by=${$('time').value}`;
+    const r=await fetch(q);if(!r.ok)throw 0;DATA=await r.json();SEL=0;
+    try{localStorage.setItem('pa_last',JSON.stringify(DATA))}catch(_){}
+    render();
+  }catch(err){
+    let c=null;try{c=JSON.parse(localStorage.getItem('pa_last')||'null')}catch(_){}
+    if(c){DATA=c;SEL=0;$('off').textContent=t('off');$('off').style.display='block';render()}
+    else $('result').innerHTML=`<div class="err">${t('err')}</div>`;
+  }
+};
+$('lang').onclick=()=>{HI=!HI;labels();if(DATA)render()};
+$('date').value=new Date().toISOString().slice(0,10);
+labels();loadStops();loadEx();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script>
+</body>
+</html>

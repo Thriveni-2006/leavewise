@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LeaveWise for operators</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ground:#e9edf1;--card:#fff;--ink:#161a1f;--mut:#586271;--line:#d3d9e0;--road:#1b1f24}
+@media (prefers-color-scheme:dark){:root{--ground:#12161a;--card:#1b2026;--ink:#eef1f4;--mut:#9aa5b3;--line:#2d343c}}
+*{box-sizing:border-box}body{margin:0;background:var(--ground);color:var(--ink);font-family:Hind,system-ui,sans-serif;font-size:16px}
+.wrap{max-width:1120px;margin:0 auto;padding:16px}
+a{color:inherit}h1{font-size:24px;margin:8px 0 4px}p{color:var(--mut);margin:4px 0 14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;overflow-x:auto}
+.seg button{border:1.5px solid var(--line);background:var(--card);padding:6px 14px;border-radius:10px;cursor:pointer;font:inherit;font-weight:600}
+.seg button[aria-pressed=true]{background:var(--road);color:#ffb000;border-color:var(--road)}
+table{border-collapse:separate;border-spacing:3px;width:100%;min-width:760px}
+th{font-weight:500;font-size:12px;color:var(--mut);padding:0 0 4px}
+td.r{white-space:nowrap;padding-right:10px;font-weight:600}td.r small{display:block;font-weight:400;color:var(--mut);font-size:12px}
+td.c{text-align:center;font-size:12px;height:34px;min-width:34px;border-radius:5px;color:#161a1f}
+.g1{background:#cfe9da}.g2{background:#f3e3a6}.g3{background:#f2bd8a}.g4{background:#e98f84}.g0{background:var(--line);color:var(--mut)}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:12px 0 0}.leg i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.top{margin:14px 0;padding:12px 14px;border-left:5px solid #ffb000;background:var(--card);border-radius:8px}
+</style></head><body><div class="wrap">
+<h1>Where is bus travel least predictable?</h1>
+<p>Each cell shows the usual trip time in minutes. Colour shows how much longer you must plan for: the 9-in-10 time compared with the usual time. From real October 2026 GPS traces.</p>
+<div class="seg"><button id="wd" aria-pressed="true">Weekday</button> <button id="we" aria-pressed="false">Weekend</button> <a href="/" style="margin-left:12px">Back to the planner</a></div>
+<div class="top" id="top"></div>
+<div class="panel"><table id="tb"></table>
+<div class="leg"><span><i class="g1"></i>Steady (up to 1.2x)</span><span><i class="g2"></i>Some risk (1.2 to 1.4x)</span><span><i class="g3"></i>Risky (1.4 to 1.7x)</span><span><i class="g4"></i>Very unpredictable (over 1.7x)</span><span><i class="g0"></i>Too few trips</span></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const cls=i=>i<=1.2?'g1':i<=1.4?'g2':i<=1.7?'g3':'g4';
+async function load(dt){
+  $('wd').setAttribute('aria-pressed',dt==='weekday');$('we').setAttribute('aria-pressed',dt==='weekend');
+  const rows=await (await fetch('/api/operator?daytype='+dt)).json();
+  const by={};rows.forEach(r=>{const k=r.route+'|'+r.direction;(by[k]=by[k]||{r,h:{}}).h[r.hour]=r});
+  const keys=Object.keys(by).sort((a,b)=>Math.max(...Object.values(by[b].h).map(x=>x.index))-Math.max(...Object.values(by[a].h).map(x=>x.index)));
+  const hrs=[...Array(19).keys()].map(i=>i+5);
+  $('tb').innerHTML='<tr><th></th>'+hrs.map(h=>`<th>${h}</th>`).join('')+'</tr>'+keys.map(k=>{
+    const b=by[k];return `<tr><td class="r">${b.r.route}<small>${b.r.from_stop} to ${b.r.to_stop}</small></td>`+
+    hrs.map(h=>{const x=b.h[h];return x?`<td class="c ${cls(x.index)}" title="${x.route} at ${h}:00. Usual ${x.median_min} min, plan for ${x.p90_min} min, ${x.n} trips">${Math.round(x.median_min)}</td>`:'<td class="c g0">·</td>'}).join('')+'</tr>'}).join('');
+  let worst=null;rows.forEach(r=>{if(!worst||r.index>worst.index)worst=r});
+  $('top').textContent=worst?`Least predictable: route ${worst.route} at ${worst.hour}:00. Usual ${worst.median_min} min, but plan for ${worst.p90_min} min (${worst.index}x). Based on ${worst.n} trips.`:'Not enough trips yet.';
+}
+$('wd').onclick=()=>load('weekday');$('we').onclick=()=>load('weekend');load('weekday');
+</script></body></html>
