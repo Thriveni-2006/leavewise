@@ -1,1 +1,1 @@
-{"on_time": {"high": 0.88, "medium": 0.85, "low": 0.97}, "buffer_min": {"high": 0.0, "medium": 20.0, "low": 20.0}}
+{"on_time": {"high": 0.88, "medium": 0.91, "low": 0.85}, "buffer_min": {"high": 0.0, "medium": 20.0, "low": 12.7}}

@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 gmaps_filled.csv
 data_tmp/
+data_v1/
+passes_v1/
+validation_report_v1.md
