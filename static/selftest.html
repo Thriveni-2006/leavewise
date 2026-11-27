@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pahunch offline self-test</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;line-height:1.5}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:6px 12px;text-align:right}th:first-child,td:first-child{text-align:left}
+.big{font-size:22px;font-weight:700}</style></head><body>
+<h1>Offline planner self-test</h1>
+<p>Compares the offline planner (runs in this browser from <code>pack.json</code>) with the full server model on 400 random trips.</p>
+<div id="out">Running...</div>
+<script src="/offline.js"></script>
+<script>
+(async()=>{
+ const out=document.getElementById('out');
+ const P=await Offline.load();if(!P){out.textContent='pack.json not found. Run: python -m leavewise.export_pack --data data --passes passes';return}
+ const C=await (await fetch('/pack_check.json')).json();
+ const byId=new Map(P.routes.map(r=>[r.id+'|'+r.dir,r]));
+ let n=0,dr=0,dp=0,dt=0,cover=0,rel=0;const diffs=[];
+ for(const c of C){const rt=byId.get(c.r+'|'+c.d);if(!rt)continue;
+   const e=Offline.estimate(rt,c.i,c.j,c.h,c.dtype);
+   const a=Math.abs(e.ride_typical_min-c.ride),b=Math.abs(e.total_plan_min-c.plan),t=Math.abs(e.total_typical_min-c.typ);
+   dr+=a;dp+=b;dt+=t;rel+=Math.abs(e.total_plan_min-c.plan)/c.plan;if(b<=Math.max(2,.1*c.plan))cover++;n++}
+ out.innerHTML=`<p class="big">${n} trips compared</p><table>
+ <tr><th>Quantity</th><th>Average difference (min)</th></tr>
+ <tr><td>Typical ride time</td><td>${(dr/n).toFixed(2)}</td></tr>
+ <tr><td>Typical wait + ride</td><td>${(dt/n).toFixed(2)}</td></tr>
+ <tr><td>Plan-for wait + ride</td><td>${(dp/n).toFixed(2)}</td></tr></table>
+ <p>Plan-for time within 2 min or 10% of the server answer: <b>${(100*cover/n).toFixed(0)}%</b> of trips. Average relative difference: ${(100*rel/n).toFixed(1)}%.</p>`;
+})();
+</script></body></html>

@@ -1,0 +1,14 @@
+from_name,to_name,google_search_from,google_search_to,date,depart,gmaps_minutes
+Kashmere Gate City Bus Terminal,Nehru Place,Kashmere Gate,Nehru Place,2026-11-27,08:30,61
+Shivaji Stadium Terminal ( Connaught Place ),Saket Crossing,Connaught Place,Saket,2026-11-27,08:30,64
+Anand Vihar,Shivaji Stadium Terminal ( Connaught Place ),Anand Vihar,Connaught Place,2026-11-27,08:30,40
+Rohini Depot 3,Shivaji Stadium Terminal ( Connaught Place ),Rohini,Connaught Place,2026-11-27,08:30,100
+Lajpat Nagar,Karol Bagh Terminal,Lajpat Nagar,Karol Bagh,2026-11-27,08:30,48
+AIIMS,Red Fort,AIIMS,Red Fort,2026-11-27,08:30,69
+Hauz Khas,Anand Vihar,Hauz Khas,Anand Vihar,2026-11-27,08:30,54
+Nehru Place,Shivaji Stadium Terminal ( Connaught Place ),Nehru Place,Connaught Place,2026-11-27,08:30,95
+Kashmere Gate City Bus Terminal,Lajpat Nagar,Kashmere Gate,Lajpat Nagar,2026-11-27,08:30,56
+Dwarka Sec1 /2   /  Mahalaxmi Apartment,Shivaji Stadium Terminal ( Connaught Place ),Dwarka,Connaught Place,2026-11-27,08:30,77
+Saket Crossing,Kashmere Gate City Bus Terminal,Saket,Kashmere Gate,2026-11-27,08:30,69
+Karol Bagh Terminal,Nehru Place,Karol Bagh,Nehru Place,2026-11-27,08:30,57
+Kashmere Gate City Bus Terminal,Nehru Place,Kashmere Gate,Nehru Place,2026-11-27,23:00,99
